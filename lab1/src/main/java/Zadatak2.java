@@ -22,9 +22,11 @@ import java.util.List;
 public class Zadatak2 {
     public static void main(String [] args) throws Exception{
         Charset charset = Charset.forName("ISO-8859-1");
-        Path start = Paths.get("/tmp/gg");
-        BufferedWriter bw = Files.newBufferedWriter(Paths.get("/tmp/gg/gutenberg_books.txt"), charset);
-        final int[] num_lines = {0};
+        Path start = Paths.get("/usr/lib/hadoop/gutenberg");
+        BufferedWriter bw = Files.newBufferedWriter(Paths.get("/usr/lib/hadoop/gutenberg_books.txt"), charset);
+        final int[] num_lines = {0, 0};
+
+        long startTime = System.currentTimeMillis();
         Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
@@ -36,6 +38,7 @@ public class Zadatak2 {
                         bw.write(line);
                         bw.newLine();
                     num_lines[0] += lines.size();
+                    num_lines[1] ++;
                 }
                 catch (Exception ex) {
                     System.out.println(file);
@@ -54,6 +57,7 @@ public class Zadatak2 {
         bw.flush();
         bw.close();
         System.out.println("Total lines " + num_lines[0]);
+        System.out.println("Total files " + num_lines[1]);
+        System.out.println("Total time " + (System.currentTimeMillis() - startTime)/1000.0 + "s");
     }
-
 }
