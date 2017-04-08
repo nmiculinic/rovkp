@@ -1,18 +1,71 @@
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.join.TupleWritable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 
+//  with combiner hadoop jar target/lab1-1.0-SNAPSHOT.jar lab2_1 trip_data.csv out.00  9.06s user 0.22s system 166% cpu 5.570 total
+// without combiner hadoop jar target/lab1-1.0-SNAPSHOT.jar lab2_1 trip_data.csv out.01  9.79s user 0.35s system 153% cpu 6.618 total
+
 public class lab2_1 {
+
+    private static class Statistics implements  Writable {
+        Double min, max, sum;
+
+        public Statistics(Double min, Double max, Double sum) {
+            this.min = min;
+            this.max = max;
+            this.sum = sum;
+        }
+
+        public Statistics(Double a) {
+            this(a,a,a);
+        }
+
+        public Statistics() {
+            this(null);
+        }
+
+        @Override
+        public void write(DataOutput dataOutput) throws IOException {
+            dataOutput.writeDouble(min);
+            dataOutput.writeDouble(max);
+            dataOutput.writeDouble(sum);
+        }
+
+        @Override
+        public void readFields(DataInput dataInput) throws IOException {
+            min = dataInput.readDouble();
+            max = dataInput.readDouble();
+            sum = dataInput.readDouble();
+        }
+
+        public void combine(Statistics other) {
+            if (this.min == null) {
+                this.min = other.min;
+                this.max = other.max;
+                this.sum = 0.0;
+            }
+            this.min = Math.min(this.min, other.min);
+            this.max = Math.max(this.max, other.max);
+            this.sum += other.sum;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + min+ ", " + max + ") total: " + sum;
+        }
+    }
+
     public static class TotalTimeMapper
-            extends Mapper<LongWritable, Text, Text, TupleWritable> {
+            extends Mapper<LongWritable, Text, Text, Statistics> {
 
         public void map(LongWritable key, Text value, Context context
         ) throws IOException, InterruptedException {
@@ -20,35 +73,21 @@ public class lab2_1 {
                 return;
             String[] record = value.toString().split(",");
             Text medallion = new Text(record[0]);
-            DoubleWritable trip_time = new DoubleWritable(Double.parseDouble(record[8]));
-            TupleWritable out = new TupleWritable(new DoubleWritable[]{trip_time, trip_time, trip_time});
-            System.out.println(medallion.toString() + "..." + ((DoubleWritable) out.get(0)).get());
-            context.write(medallion,out);
+            Statistics trip_time = new Statistics(Double.parseDouble(record[8]));
+            context.write(medallion,trip_time);
         }
     }
 
     public static class DriveTimeReducer
-            extends Reducer<Text,TupleWritable,Text,TupleWritable> {
-        private double getDouble(TupleWritable t, int i) {
-            return  ((DoubleWritable) t.get(i)).get();
-        }
-        public void reduce(Text key, Iterable<TupleWritable> values,
+            extends Reducer<Text,Statistics,Text,Statistics> {
+        public void reduce(Text key, Iterable<Statistics> values,
                            Context context
         ) throws IOException, InterruptedException {
-            Double min = null;
-            Double sum = 0.;
-            Double max = null;
-            for (TupleWritable val : values) {
-                if (min == null) {
-                    min = getDouble(val, 0);
-                    max = getDouble(val, 1);
-                }
-                min = Math.min(min, getDouble(val, 0));
-                max = Math.max(max, getDouble(val, 1));
-                sum += getDouble(val, 2);
+            Statistics sol = new Statistics();
+            for (Statistics val : values) {
+                sol.combine(val);
             }
-            System.out.println(key.toString() + " __ " + min +"," + max+" -->" + sum);
-            context.write(key, new TupleWritable(new Writable[]{new DoubleWritable(min), new DoubleWritable(max), new DoubleWritable(sum)}));
+            context.write(key, sol);
         }
     }
 
@@ -61,7 +100,7 @@ public class lab2_1 {
         job.setReducerClass(DriveTimeReducer.class);
 
         job.setOutputKeyClass(Text.class);
-        job.setOutputValueClass(TupleWritable.class);
+        job.setOutputValueClass(Statistics.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
