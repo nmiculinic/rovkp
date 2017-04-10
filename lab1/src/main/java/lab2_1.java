@@ -11,12 +11,17 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+// - Koliko različitih vozila se nalazi u ulaznoj datoteci?  9834
+// - - Koliko je trajala najdulja ukupna vožnja jednog taksija? Koja je minimalna, a koja najdulja vožnja tog taksija?
+// Taxi FFFECF7... 60 najkraca, 3660 najdulja, ukupon 134640 sve voznje
+//  - Koje ste promjene morali napraviti na izvornom kodu prilikom uvođenja optimizacijske funkcije Combine?
+// Dodati samo combiner klasu koja je ekvivalentna reduceru
 //  with combiner hadoop jar target/lab1-1.0-SNAPSHOT.jar lab2_1 trip_data.csv out.00  9.06s user 0.22s system 166% cpu 5.570 total
 // without combiner hadoop jar target/lab1-1.0-SNAPSHOT.jar lab2_1 trip_data.csv out.01  9.79s user 0.35s system 153% cpu 6.618 total
 
 public class lab2_1 {
 
-    private static class Statistics implements  Writable {
+    public static class Statistics implements  Writable {
         Double min, max, sum;
 
         public Statistics(Double min, Double max, Double sum) {
@@ -72,7 +77,7 @@ public class lab2_1 {
             if (key.get() == 0)
                 return;
             String[] record = value.toString().split(",");
-            Text medallion = new Text(record[0]);
+            Text medallion = new Text(record[0] + ">>>" + record[7]);
             Statistics trip_time = new Statistics(Double.parseDouble(record[8]));
             context.write(medallion,trip_time);
         }
