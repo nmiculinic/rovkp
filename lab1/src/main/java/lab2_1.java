@@ -77,7 +77,7 @@ public class lab2_1 {
             if (key.get() == 0)
                 return;
             String[] record = value.toString().split(",");
-            Text medallion = new Text(record[0] + ">>>" + record[7]);
+            Text medallion = new Text(record[0]);
             Statistics trip_time = new Statistics(Double.parseDouble(record[8]));
             context.write(medallion,trip_time);
         }
