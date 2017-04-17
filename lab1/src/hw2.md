@@ -1,3 +1,5 @@
+U ovom file su zadaca i labos rjesenja. Odgovi na pitanja su u komentarima koda
+
 # Homework
 
 ## Zadatak 1
@@ -370,3 +372,272 @@ public class lab2_3 {
 # Labos
 
 ## Zadatak 1
+
+```java
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import java.io.IOException;
+//
+//- Koje funkcije sadrži vaš MapReduce program (map, reduce, partitioner, combiner, itd.)?
+// Samo mapper
+// - Koliko izlaznih datoteka je nastalo nakon izvođenja vašeg MapReduce programa?
+// 3 izlazne datoteke
+// wc -l *
+//           685290 part-m-00000
+//           684945 part-m-00001
+//           590542 part-m-00002
+//           0 _SUCCESS
+//           1960777 total
+// Ukupno 1 960 777 je zadovoljilo kriterija
+//
+// - Koliko zapisa u ulaznoj datoteci nije zadovoljilo zadane kriterije?
+// 1999999 /home/lpp/Downloads/sorted_data.csv ukupno zapisa
+// 39222 nije zadovoljilo kriterija (razlika)
+
+public class l2_1 {
+
+    private static final double GRID_WIDTH = 0.008983112;
+    private static final double GRID_LENGTH = 0.011972;
+
+    private static final double BEGIN_LON = -74.913585;
+    private static final double BEGIN_LAT = 41.474937;
+
+    public static int[] getCellId(double lat, double lon) {
+        int[] sol = new int[2];
+        sol[0] = (int) (((lon - BEGIN_LON) / GRID_LENGTH) + 1);
+        sol[1] = (int) (((BEGIN_LAT - lat) / GRID_WIDTH) + 1);
+        return sol;
+    }
+
+    public static boolean isInArea(double lat, double lon){
+        int[] cell = getCellId(lat, lon);
+        if (cell[0] < 0 || cell[0] > 150)
+            return false;
+        if (cell[1] < 0 || cell[1] > 150)
+            return  false;
+        return true;
+    }
+
+
+    public static boolean isInArea(String[] record) {
+        Double lon_in = Double.parseDouble(record[6]);
+        Double lat_in = Double.parseDouble(record[7]);
+        Double log_out = Double.parseDouble(record[8]);
+        Double lat_out = Double.parseDouble(record[9]);
+        return isInArea(lat_in, lon_in) && isInArea(lat_out, log_out);
+    }
+
+    public static double profit(String[] record) {
+        return Double.parseDouble(record[16]);
+    }
+
+    public static class FilterMapper
+            extends Mapper<LongWritable, Text, NullWritable , Text> {
+
+        public void map(LongWritable key, Text value, Context context
+        ) throws IOException, InterruptedException {
+            String[] record = value.toString().split(",");
+            if (profit(record) <= 0) return;
+            if (!isInArea(record)) return;
+
+            context.write(NullWritable.get(), value);
+        }
+    }
+
+    public static int executeTask1(Configuration conf, Path in, Path out) throws Exception{
+        Job job = Job.getInstance(conf, "lab 2.1");
+        job.setJarByClass(l2_1.class);
+        job.setMapperClass(FilterMapper.class);
+        job.setNumReduceTasks(0);
+
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.addInputPath(job, in);
+        FileSystem.get(conf).delete(out, true);
+        FileOutputFormat.setOutputPath(job, out);
+        return  job.waitForCompletion(true) ? 0 : 1;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+
+        System.exit(executeTask1(conf, new Path(args[0]), new Path(args[1])));
+    }
+}
+```
+
+## Zadatak 2
+
+```java
+/*
+- Koje funkcije sadrži vaš MapReduce program?
+Mapper, reducer i partitioner
+- Koje tipove podataka ste definirali kao izlaz iz MapReduce programa?
+Izlaz mapera je Int (sat) i Text(cijela voznja), dok je izlaz reducera definiran u zadatku
+*/
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+public class l2_2 {
+
+    public static int getHoD(String[] record) throws ParseException {
+        String dateTimeString = record[2];
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date dateTime = format.parse(dateTimeString);
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(dateTime);
+        return cal.get(Calendar.HOUR_OF_DAY);
+    }
+
+    public static class HourMapper
+            extends Mapper<LongWritable, Text, IntWritable, Text> {
+
+        public void map(LongWritable key, Text value, Context context
+        ) throws IOException, InterruptedException {
+            String[] record = value.toString().split(",");
+            try {
+                context.write(new IntWritable(l2_2.getHoD(record)), value);
+            } catch (ParseException ex) {
+                System.err.println(ex);
+            }
+        }
+    }
+
+    public static class HourPartitioner extends Partitioner<IntWritable, Text> {
+        @Override
+        public int getPartition(IntWritable intWritable, Text text, int numPartitions) {
+            return intWritable.get();
+        }
+    }
+
+    public static class HourReducer
+            extends Reducer<IntWritable, Text, NullWritable, Text> {
+
+        @Override
+        protected void reduce(IntWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            Map<String, Integer> drives = new HashMap<>();
+            Map<String, Double> profits = new HashMap<>();
+
+            for (Text value : values) {
+                String[] record = value.toString().split(",");
+                double profit = l2_1.profit(record);
+                Double lon_in = Double.parseDouble(record[6]);
+                Double lat_in = Double.parseDouble(record[7]);
+                int[] cellId = l2_1.getCellId(lat_in, lon_in);
+                String cell = "Cell " + "(" + cellId[0] + ", " + cellId[1] + ")";
+
+                drives.put(cell, 1 + (drives.get(cell) != null ? drives.get(cell) : 0));
+                profits.put(cell, profit + (profits.get(cell) != null ? profits.get(cell) : 0.0));
+            }
+
+            context.write(NullWritable.get(), new Text(key.toString()));
+            String max_drive_cell = Collections.max(drives.entrySet(), Comparator.comparing(Map.Entry::getValue)).getKey();
+            context.write(NullWritable.get(), new Text(max_drive_cell + " -> " + drives.get(max_drive_cell)));
+
+            String max_profits_cell = Collections.max(profits.entrySet(), Comparator.comparing(Map.Entry::getValue)).getKey();
+            context.write(NullWritable.get(), new Text(max_profits_cell + " -> " + profits.get(max_profits_cell)));
+        }
+    }
+
+
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        System.exit(executeTask2(conf, new Path(args[0]), new Path(args[1])));
+    }
+
+    public static int executeTask2(Configuration conf, Path in, Path out) throws IOException, InterruptedException, ClassNotFoundException {
+        Job job = Job.getInstance(conf, "Lab 2.2");
+        job.setJarByClass(l2_2.class);
+        job.setMapperClass(HourMapper.class);
+        job.setPartitionerClass(HourPartitioner.class);
+        job.setReducerClass(HourReducer.class);
+        job.setNumReduceTasks(24);
+
+        job.setOutputKeyClass(IntWritable.class);
+        job.setOutputValueClass(Text.class);
+
+        FileInputFormat.addInputPath(job, in);
+        FileSystem.get(conf).delete(out, true);
+        FileOutputFormat.setOutputPath(job, out);
+
+        return job.waitForCompletion(true) ? 0 : 1;
+    }
+}
+```
+
+## Zadatak 3
+
+```java
+/*
+
+- Kolika je veličina ulaznog skupa podataka?
+32GB
+- Koliko ste MapReduce poslova izvršili u vašem kôdu?
+2
+- Koje ste promjene napravili za prvi, a koje za drugi MapReduce posao?
+Extraktao sam metode iz l2_1 i l2_2 da ih mogu lijepse zvati. Ulancao sam ih s provjerom izlaznog koa
+
+- Koje su prednosti, a koji nedostaci ovakvog sažimanja međurezultata?
+Filtracijom je working set smanjen za drugi ulancani posao te je brzi.
+
+*/
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+public class l2_3 {
+
+    public static Path TMPDIR = new Path("nmiculinic/tmp");
+
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        int code = l2_1.executeTask1(conf, new Path(args[0]), TMPDIR);
+        if (code == 0) {
+            code = l2_2.executeTask2(conf, TMPDIR, new Path(args[1]));
+        }
+        FileSystem.get(conf).delete(TMPDIR, true);
+        System.exit(code);
+    }
+
+}
+```
