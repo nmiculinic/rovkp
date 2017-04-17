@@ -76,9 +76,8 @@ public class l2_1 {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "drive time lab 2.1");
+    public static int executeTask1(Configuration conf, Path in, Path out) throws Exception{
+        Job job = Job.getInstance(conf, "lab 2.1");
         job.setJarByClass(l2_1.class);
         job.setMapperClass(FilterMapper.class);
         job.setNumReduceTasks(0);
@@ -86,10 +85,15 @@ public class l2_1 {
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(Text.class);
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileSystem.get(conf).delete(new Path(args[1]), true);
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        FileInputFormat.addInputPath(job, in);
+        FileSystem.get(conf).delete(out, true);
+        FileOutputFormat.setOutputPath(job, out);
+        return  job.waitForCompletion(true) ? 0 : 1;
+    }
 
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+
+        System.exit(executeTask1(conf, new Path(args[0]), new Path(args[1])));
     }
 }

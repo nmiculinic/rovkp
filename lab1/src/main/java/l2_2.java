@@ -88,7 +88,11 @@ public class l2_2 {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "drive time lab 2.1");
+        System.exit(executeTask2(conf, new Path(args[0]), new Path(args[1])));
+    }
+
+    public static int executeTask2(Configuration conf, Path in, Path out) throws IOException, InterruptedException, ClassNotFoundException {
+        Job job = Job.getInstance(conf, "Lab 2.2");
         job.setJarByClass(l2_2.class);
         job.setMapperClass(HourMapper.class);
         job.setPartitionerClass(HourPartitioner.class);
@@ -98,10 +102,10 @@ public class l2_2 {
         job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(Text.class);
 
-        FileInputFormat.addInputPath(job, new Path(args[0]));
-        FileSystem.get(conf).delete(new Path(args[1]), true);
-        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        FileInputFormat.addInputPath(job, in);
+        FileSystem.get(conf).delete(out, true);
+        FileOutputFormat.setOutputPath(job, out);
 
-        System.exit(job.waitForCompletion(true) ? 0 : 1);
+        return job.waitForCompletion(true) ? 0 : 1;
     }
 }
