@@ -8,7 +8,7 @@
 Extraktao sam metode iz l2_1 i l2_2 da ih mogu lijepse zvati. Ulancao sam ih s provjerom izlaznog koa
 
 - Koje su prednosti, a koji nedostaci ovakvog sažimanja međurezultata?
-Filtracijom je working set smanjen za drugi ulancani posao te je brzi. 
+Filtracijom je working set smanjen za drugi ulancani posao te je brzi.
 
 */
 
@@ -41,6 +41,7 @@ public class l2_3 {
         if (code == 0) {
             code = l2_2.executeTask2(conf, TMPDIR, new Path(args[1]));
         }
+        FileSystem.get(conf).delete(TMPDIR, true);
         System.exit(code);
     }
 
