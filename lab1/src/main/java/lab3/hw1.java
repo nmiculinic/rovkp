@@ -118,8 +118,8 @@ public class hw1 {
         }
 
         // Step 5: Writing data
-        try(PrintWriter writer = new PrintWriter(new FileWriter("/tmp/item_similarity.csv"))){
-            writer.println("ID1,ID2,slicnost");
+        try(PrintWriter writer = new PrintWriter(new FileWriter("/home/lpp/Downloads/jester_item_similarity.csv"))){
+//            writer.println("ID1,ID2,slicnost");
             for (int i = 0; i < jokes.size(); ++i) {
                 for (int j = i + 1; j < jokes.size(); ++j) {
                     if (sol[i][j] > 0) {
