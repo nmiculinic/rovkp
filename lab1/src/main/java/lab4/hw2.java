@@ -28,7 +28,7 @@ public class hw2 {
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
         JavaRDD<String> records = sc.textFile(args[0]);
         JavaRDD<USBabyNameRecord> rdd = records.filter(USBabyNameRecord::isParsable).map(USBabyNameRecord::new);
-        BufferedWriter writer = new BufferedWriter(new FileWriter("/home/rovkp/results.txt"));
+        BufferedWriter writer = new BufferedWriter(new FileWriter("/home/rovkp/nmiculinic/results.txt"));
 
         writer.write("\nNajnepopularnije zensko ime: \n");
         writer.write(rdd.filter(d -> d.getGender().equals("F")).sortBy(USBabyNameRecord::getCount, true, 1).first().toString() + "\n");
