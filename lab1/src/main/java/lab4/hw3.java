@@ -13,11 +13,33 @@ import java.util.NoSuchElementException;
 
 /**
  * Created by lpp on 6/5/17.
+ *
+ * Koliko često (u sekundama) nastaje novi direktorij na disku?
+ * 10 sekundi
+ - Koliko često (u sekundama) se pokreće izračun?
+ - 10 sekundi
+ - Može li vrijednost parametra solarPanelCurrent neke stanice biti manja u nekom direktoriju nego u
+ njegovom neposrednom prethodniku. Zašto?
+ - Moze, zbog prirode rolling max
+ - Kako se kreću vrijednosti parametra solarPanelCurrent neke postaje u prva 3 direktorija koji su nastali?
+ Zašto?
+ (100,99.713)
+ (100,99.713)
+ (100,99.713)
+ (100,99.713)
+ (100,99.713)
+ (100,99.713)
+ (100,99.103)
+ (100,99.103)
+ (100,98.444)
+ (100,98.126)
+ (100,98.126)
+
+ Prvih par vrijednosti je isto zbog vece velicine windowa, nego slide duration
  */
 public class hw3 {
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Usao");
         SparkConf conf = new SparkConf().setAppName("SparkStreamingTotalDistanceDriver");
         try {
             conf.get("spark.master");
@@ -32,7 +54,7 @@ public class hw3 {
                 mapToPair(sr -> new Tuple2<>(sr.getStationID(), sr.getSolarCurrent())).
                 reduceByKeyAndWindow(Math::max, Durations.seconds(60), Durations.seconds(10));
 
-        result.dstream().saveAsTextFiles("/tmp/spark/job", "txt");
+        result.dstream().saveAsTextFiles("/tmp/spark/job", "");
         jssc.start();
         jssc.awaitTermination();
     }
