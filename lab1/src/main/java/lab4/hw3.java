@@ -40,7 +40,7 @@ import java.util.NoSuchElementException;
 public class hw3 {
 
     public static void main(String[] args) throws Exception {
-        SparkConf conf = new SparkConf().setAppName("SparkStreamingTotalDistanceDriver");
+        SparkConf conf = new SparkConf().setAppName("hw3");
         try {
             conf.get("spark.master");
         } catch (NoSuchElementException ex) {
